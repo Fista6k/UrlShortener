@@ -1,9 +1,15 @@
 package service
 
-import ""
+import (
+	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
+)
 
-type Storage interface {
-	Save(link *Link) error
-	FindByShortCode(code string) (*Link, error)
-	FindByURL(url string) (*Link, error)
+type ShortererService struct {
+	storage domain.LinkRepository
+}
+
+func NewShortererService(storage domain.LinkRepository) *ShortererService {
+	return &ShortererService{
+		storage: storage,
+	}
 }

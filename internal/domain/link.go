@@ -17,3 +17,13 @@ type Link struct {
 	CreatedAt   time.Time   `json: created_at`
 }
 
+func NewLink(url, short_url string) (*Link, error) {
+	l := &Link{
+		ID:          uuid.New(),
+		OriginalUrl: OriginalUrl(url),
+		ShortUrl:    ShortUrl(short_url),
+		CreatedAt:   time.Now(),
+	}
+
+	return l, nil
+}

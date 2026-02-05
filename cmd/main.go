@@ -17,16 +17,3 @@ func main() {
 
 	r.Run()
 }
-
-func mainPageHandler(c *gin.Context) {
-	c.HTML(http.StatusOK, "home.html", gin.H{
-		"title": "Main page",
-	})
-}
-
-func mainFormHandler(c *gin.Context) {
-	url := c.PostForm("url")
-	c.IndentedJSON(http.StatusOK, gin.H{
-		"url": url,
-	})
-}
