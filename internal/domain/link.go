@@ -27,3 +27,7 @@ func NewLink(url, short_url string) (*Link, error) {
 
 	return l, nil
 }
+
+func (l *Link) ToJson() map[string]interface{
+
+}

@@ -1,61 +1,85 @@
 package service
 
 import (
+	"net/http"
+
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
-	"github.com/Fista6k/Url-Shorterer.git/internal/dto"
+	"github.com/gin-gonic/gin"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
-func (s ShortererService) Shorten(input dto.CreateShortLinkInput) (dto.CreateShortLinkOutput, error) {
-	var output dto.CreateShortLinkOutput
+func (s ShortererService) Shorten(c *gin.Context) {
+	link := &domain.Link{}
 
-	oldLink, err := s.storage.FindByURL(input.Url)
+	if err := c.ShouldBindJSON(link); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"msg": "invalid request",
+		})
+		return
+	}
+
+	oldLink, err := s.storage.FindByURL(string(link.OriginalUrl))
 	if err != nil {
-		return output, domain.ErrNotFound
+		c.JSON(http.StatusNotFound, gin.H{
+			"msg": "url not found",
+		})
+		return
 	}
 	if oldLink != nil {
-		return dto.CreateShortLinkOutput{
-			OriginalUrl: string(oldLink.OriginalUrl),
-			ShortUrl:    string(oldLink.ShortUrl),
-		}, nil
+		c.JSON(http.StatusCreated, oldLink.ToJson())
+		return
 	}
 
 	alphabet := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890"
 
 	short_url, err := gonanoid.Generate(alphabet, 8)
 	if err != nil {
-		return output, domain.ErrInternalProblems
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg": "cant generate short url",
+		})
+		return
 	}
 
 	url, err := s.storage.FindByShortCode(short_url)
 	if err != nil {
-		return output, domain.ErrNotFound
+		c.JSON(http.StatusNotFound, gin.H{
+			"msg": "url not found",
+		})
 	}
 
 	for url != nil {
 		short_url, err = gonanoid.Generate(alphabet, 8)
 		if err != nil {
-			return output, domain.ErrInternalProblems
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg": "cant generate short url",
+			})
+			return
 		}
 
 		url, err = s.storage.FindByShortCode(short_url)
 		if err != nil {
-			return output, domain.ErrNotFound
+			c.JSON(http.StatusNotFound, gin.H{
+				"msg": "url not found",
+			})
+			return
 		}
 	}
 
-	l, err := domain.NewLink(input.Url, short_url)
+	l, err := domain.NewLink(string(link.OriginalUrl), short_url)
 	if err != nil {
-		return output, err
+		c.JSON(http.StatusBadRequest, gin.H{
+			"msg": "cant create link object",
+		})
+		return
 	}
 
 	err = s.storage.Save(l)
 	if err != nil {
-		return output, err
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg": "cant save to database",
+		})
+		return
 	}
 
-	return dto.CreateShortLinkOutput{
-		ShortUrl:    short_url,
-		OriginalUrl: input.Url,
-	}, nil
+	c.JSON(http.StatusCreated, url.ToJson())
 }

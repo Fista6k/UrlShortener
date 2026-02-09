@@ -1,18 +1,27 @@
 package service
 
 import (
-	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
-	"github.com/Fista6k/Url-Shorterer.git/internal/dto"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func (s ShortererService) Redirect(shortCode string) (dto.CreateShortLinkOutput, error) {
-	var output dto.CreateShortLinkOutput
+func (s ShortererService) Redirect(c *gin.Context) {
+	var shortCode string
+	if err := c.ShouldBindUri(&shortCode); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"msg": "invalid request",
+		})
+		return
+	}
 	link, err := s.storage.FindByShortCode(shortCode)
 	if err != nil {
-		return output, domain.ErrNotFound
+		c.JSON(http.StatusNotFound, gin.H{
+			"msg": "url not found",
+		})
+		return
 	}
-	return dto.CreateShortLinkOutput{
-		OriginalUrl: string(link.OriginalUrl),
-		ShortUrl:    string(link.ShortUrl),
-	}, nil
+
+	c.Redirect(http.StatusPermanentRedirect, string(link.OriginalUrl))
+	return
 }

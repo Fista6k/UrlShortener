@@ -1,14 +1,14 @@
 package service
 
 import (
-	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
+	"github.com/Fista6k/Url-Shorterer.git/internal/adapter"
 )
 
 type ShortererService struct {
-	storage domain.LinkRepository
+	storage adapter.Storage
 }
 
-func NewShortererService(storage domain.LinkRepository) *ShortererService {
+func NewShortererService(storage adapter.Storage) *ShortererService {
 	return &ShortererService{
 		storage: storage,
 	}
