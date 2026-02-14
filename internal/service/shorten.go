@@ -1,85 +1,38 @@
 package service
 
 import (
-	"net/http"
+	"crypto/sha256"
+	"fmt"
+	"math/big"
+	"os"
 
-	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 	"github.com/gin-gonic/gin"
-	gonanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/itchyny/base58-go"
 )
 
 func (s ShortererService) Shorten(c *gin.Context) {
-	link := &domain.Link{}
 
-	if err := c.ShouldBindJSON(link); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"msg": "invalid request",
-		})
-		return
-	}
+}
 
-	oldLink, err := s.storage.FindByURL(string(link.OriginalUrl))
+func hashing(input string) []byte {
+	s := sha256.New()
+	s.Write([]byte(input))
+	return s.Sum(nil)
+}
+
+func encoding(bytes []byte) string {
+	encoding := base58.BitcoinEncoding
+	encoded, err := encoding.Encode(bytes)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"msg": "url not found",
-		})
-		return
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
-	if oldLink != nil {
-		c.JSON(http.StatusCreated, oldLink.ToJson())
-		return
-	}
+	return string(encoded)
+}
 
-	alphabet := "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890"
-
-	short_url, err := gonanoid.Generate(alphabet, 8)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"msg": "cant generate short url",
-		})
-		return
-	}
-
-	url, err := s.storage.FindByShortCode(short_url)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"msg": "url not found",
-		})
-	}
-
-	for url != nil {
-		short_url, err = gonanoid.Generate(alphabet, 8)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"msg": "cant generate short url",
-			})
-			return
-		}
-
-		url, err = s.storage.FindByShortCode(short_url)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"msg": "url not found",
-			})
-			return
-		}
-	}
-
-	l, err := domain.NewLink(string(link.OriginalUrl), short_url)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"msg": "cant create link object",
-		})
-		return
-	}
-
-	err = s.storage.Save(l)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"msg": "cant save to database",
-		})
-		return
-	}
-
-	c.JSON(http.StatusCreated, url.ToJson())
+func GenerateShortLink(originalUrl, userId string) string {
+	urlHashBytes := hashing(originalUrl + userId)
+	generatedNumber := new(big.Int).SetBytes(urlHashBytes).Uint64()
+	result := encoding([]byte(fmt.Sprintf("%d", generatedNumber)))
+	return result[:8]
 }

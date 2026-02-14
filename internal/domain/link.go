@@ -6,28 +6,23 @@ import (
 	"github.com/google/uuid"
 )
 
-type OriginalUrl string
-
-type ShortUrl string
-
 type Link struct {
-	ID          uuid.UUID   `json: id`
-	OriginalUrl OriginalUrl `json: url`
-	ShortUrl    ShortUrl    `json: short_url`
-	CreatedAt   time.Time   `json: created_at`
+	ID          uuid.UUID `json: id`
+	OriginalUrl string    `json: url`
+	ShortUrl    string    `json: short_url`
+	CreatedAt   time.Time `json: created_at`
 }
 
 func NewLink(url, short_url string) (*Link, error) {
 	l := &Link{
 		ID:          uuid.New(),
-		OriginalUrl: OriginalUrl(url),
-		ShortUrl:    ShortUrl(short_url),
+		OriginalUrl: url,
+		ShortUrl:    short_url,
 		CreatedAt:   time.Now(),
 	}
 
 	return l, nil
 }
 
-func (l *Link) ToJson() map[string]interface{
-
+func (l *Link) ToJson() map[string]interface {
 }
