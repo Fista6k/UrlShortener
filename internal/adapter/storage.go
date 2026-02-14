@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
+	_ "github.com/lib/pq"
 )
 
 type storage struct {
@@ -22,24 +23,27 @@ func ConnToStorage() (*storage, error) {
 	connStr := makeConnStr()
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
+		fmt.Println(1)
 		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
+		fmt.Println(2)
 		return nil, err
 	}
 
 	query := `
 		CREATE TABLE IF NOT EXISTS links (
-			id SERIAL PRIMARY KEY
-			original_url TEXT NOT NULL
-			short_url TEXT NOT NULL
+			id SERIAL PRIMARY KEY,
+			original_url TEXT NOT NULL,
+			short_url TEXT NOT NULL,
 			created_at TIMESTAMP DEFAULT NOW()
 	);`
 
 	_, err = db.Exec(query)
 	if err != nil {
+		fmt.Println(3)
 		return nil, err
 	}
 

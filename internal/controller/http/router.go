@@ -1,4 +1,4 @@
-package http
+package controller
 
 import (
 	"github.com/Fista6k/Url-Shorterer.git/internal/service"
@@ -14,12 +14,15 @@ func NewRouter(service *service.ShortererService) *Router {
 		gin.Default(),
 	}
 
+	router.Router.LoadHTMLGlob("static/*.html")
+
 	router.AddEndPoints(service)
 
 	return router
 }
 
 func (r Router) AddEndPoints(service *service.ShortererService) {
-	r.Router.POST("/create-shortUrl", service.Shorten)
+	r.Router.GET("/", service.MainPage)
+	r.Router.POST("/shorten", service.Shorten)
 	r.Router.GET("/:shortUrl", service.Redirect)
 }

@@ -8,15 +8,17 @@ import (
 
 func (s storage) Save(link *domain.Link) error {
 	query := `
-		INSERT INTO links original_url, short_url, created_at
+		INSERT INTO links (original_url, short_url, created_at)
 		VALUES ($1, $2, $3)
-		returning id
+		RETURNING id
 	`
 
 	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
 	if err != nil {
 		return err
 	}
+
+	return nil
 }
 
 func (s storage) FindByShortCode(code string) (*domain.Link, error) {
@@ -26,7 +28,7 @@ func (s storage) FindByShortCode(code string) (*domain.Link, error) {
 		WHERE short_url = $1
 	`
 
-	var link *domain.Link
+	var link domain.Link
 	err := s.db.QueryRow(query, code).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
 
 	if err != nil {
@@ -37,7 +39,7 @@ func (s storage) FindByShortCode(code string) (*domain.Link, error) {
 		}
 	}
 
-	return link, nil
+	return &link, nil
 }
 
 func (s storage) FindByURL(url string) (*domain.Link, error) {
@@ -47,7 +49,7 @@ func (s storage) FindByURL(url string) (*domain.Link, error) {
 		WHERE original_url = $1
 	`
 
-	var link *domain.Link
+	var link domain.Link
 	err := s.db.QueryRow(query, url).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
 
 	if err != nil {
@@ -58,5 +60,5 @@ func (s storage) FindByURL(url string) (*domain.Link, error) {
 		}
 	}
 
-	return link, nil
+	return &link, nil
 }

@@ -9,24 +9,16 @@ import (
 	"time"
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
-	"github.com/Fista6k/Url-Shorterer.git/internal/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/itchyny/base58-go"
 )
 
 func (s ShortererService) Shorten(c *gin.Context) {
-	var request dto.RequestLink
+	original_url := c.PostForm("url")
 
-	if err := c.ShouldBind(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid request",
-		})
-		return
-	}
-
-	shortUrl := GenerateShortLink(request.OriginalUrl)
-	err = s.storage.Save(&domain.Link{
-		OriginalUrl: request.OriginalUrl,
+	shortUrl := GenerateShortLink(original_url)
+	err := s.storage.Save(&domain.Link{
+		OriginalUrl: original_url,
 		ShortUrl:    shortUrl,
 		CreatedAt:   time.Now(),
 	})
@@ -35,11 +27,11 @@ func (s ShortererService) Shorten(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
+		return
 	}
 
-	c.JSON(http.StatusCreated, dto.ResponseLink{
-		Message:  "shory url created successfully",
-		ShortUrl: shortUrl,
+	c.HTML(http.StatusCreated, "index.html", gin.H{
+		"ShortUrl": shortUrl,
 	})
 }
 
