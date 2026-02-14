@@ -14,9 +14,12 @@ func NewRouter(service *service.ShortererService) *Router {
 		gin.Default(),
 	}
 
-	router.Router.AddEndPoints(service)
+	router.AddEndPoints(service)
+
+	return router
 }
 
 func (r Router) AddEndPoints(service *service.ShortererService) {
-	r.Router.POST("/", service.Shorten)
+	r.Router.POST("/create-shortUrl", service.Shorten)
+	r.Router.GET("/:shortUrl", service.Redirect)
 }

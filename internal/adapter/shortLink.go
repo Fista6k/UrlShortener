@@ -6,14 +6,17 @@ import (
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 )
 
-func (s storage) Save(link *domain.Link) {
+func (s storage) Save(link *domain.Link) error {
 	query := `
 		INSERT INTO links original_url, short_url, created_at
 		VALUES ($1, $2, $3)
 		returning id
 	`
 
-	s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
+	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
+	if err != nil {
+		return err
+	}
 }
 
 func (s storage) FindByShortCode(code string) (*domain.Link, error) {
