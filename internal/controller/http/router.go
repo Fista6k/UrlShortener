@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 	"sync"
 
@@ -10,12 +11,25 @@ import (
 )
 
 type Router struct {
-	Router *gin.Engine
+	Router      *gin.Engine
+	RateLimiter *RateLimiter
+}
+
+type Client struct {
+	limiter *rate.Limiter
+}
+
+type RateLimiter struct {
+	clients map[string]*Client
+	mu      sync.Mutex
 }
 
 func NewRouter(service *service.ShortererService) *Router {
 	router := &Router{
 		gin.Default(),
+		&RateLimiter{
+			clients: make(map[string]*Client),
+		},
 	}
 
 	router.Router.LoadHTMLGlob("static/*.html")
@@ -26,38 +40,39 @@ func NewRouter(service *service.ShortererService) *Router {
 }
 
 func (r Router) AddEndPoints(service *service.ShortererService) {
-	r.Router.Use(r.RateLimiter())
+	r.Router.Use(r.RateLimiterFunc())
 	r.Router.GET("/", service.MainPage)
 	r.Router.POST("/shorten", service.Shorten)
 	r.Router.GET("/:shortUrl", service.Redirect)
 }
 
-func (r Router) RateLimiter() gin.HandlerFunc {
-	type client struct {
-		limiter *rate.Limiter
-	}
-
-	var (
-		mu      sync.Mutex
-		clients = make(map[string]*client)
-	)
-
+func (r Router) RateLimiterFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 
-		mu.Lock()
-		if _, ok := clients[ip]; !ok {
-			clients[ip] = &client{limiter: rate.NewLimiter(10, 20)}
+		r.RateLimiter.mu.Lock()
+		if _, ok := r.RateLimiter.clients[ip]; !ok {
+			r.RateLimiter.clients[ip] = &Client{limiter: rate.NewLimiter(10, 20)}
 		}
-		cl := clients[ip]
-		mu.Unlock()
+		cl := r.RateLimiter.clients[ip]
+		r.RateLimiter.mu.Unlock()
 
 		if !cl.limiter.Allow() {
+			log.Println("rate limited", ip)
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"error": "rate limit exceeded",
 			})
+			return
 		}
+		log.Println("allowed request from", ip)
 
 		c.Next()
 	}
+}
+
+func (rl *RateLimiter) Stop() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	rl.clients = make(map[string]*Client)
 }
