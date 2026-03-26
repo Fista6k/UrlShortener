@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,15 +29,21 @@ func main() {
 	port := flag.String("port", "8080", "where i run server")
 	flag.Parse()
 
-	storage, err := adapter.ConnToStorage()
+	logger := slog.Default()
+
+	storage, err := adapter.ConnToStorage(context.WithValue(ctx, "logger", logger))
 	if err != nil {
-		fmt.Println("something went wrong with storage init")
-		fmt.Printf("err: %v", err)
+		logger.LogAttrs(
+			context.TODO(),
+			slog.LevelError,
+			"something went wrong with storage init",
+			slog.Any("error", err),
+		)
 		os.Exit(1)
 	}
 
-	service := service.NewShortererService(storage)
-	r := controller.NewRouter(service)
+	service := service.NewShortererService(context.WithValue(ctx, "logger", logger), storage)
+	r := controller.NewRouter(context.WithValue(ctx, "logger", logger), service)
 	addr := ":" + *port
 
 	server := &http.Server{
@@ -46,20 +52,32 @@ func main() {
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			logger.LogAttrs(
+				context.TODO(),
+				slog.LevelError,
+				"filed while listening",
+				slog.Any("error", err),
+			)
+			os.Exit(1)
 		}
 	}()
 
 	<-ctx.Done()
 
-	log.Println("shutting down gracefully, press Ctrl+C to force")
+	logger.Info("shutting down gracefully, press Ctrl+C to force")
 
 	r.RateLimiter.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Println("Server forced to shutdown: ", err)
+		logger.LogAttrs(
+			ctx,
+			slog.LevelError,
+			"Server forced to shutdown",
+			slog.Any("error", err),
+		)
+		os.Exit(1)
 	}
 
-	log.Println("Server exiting")
+	logger.Info("Server exiting")
 }

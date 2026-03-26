@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
@@ -10,7 +12,8 @@ import (
 )
 
 type storage struct {
-	db *sql.DB
+	db  *sql.DB
+	ctx context.Context
 }
 
 type Storage interface {
@@ -19,17 +22,28 @@ type Storage interface {
 	FindByURL(string) (*domain.Link, error)
 }
 
-func ConnToStorage() (*storage, error) {
+func ConnToStorage(ctx context.Context) (*storage, error) {
+	logger := ctx.Value("logger").(*slog.Logger)
+
 	connStr := makeConnStr()
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		fmt.Println(1)
+		logger.LogAttrs(
+			ctx,
+			slog.LevelError,
+			"can't open database with connect string",
+			slog.Any("error", err),
+		)
 		return nil, err
 	}
 
 	err = db.Ping()
 	if err != nil {
-		fmt.Println(2)
+		logger.LogAttrs(ctx,
+			slog.LevelError,
+			"error while ping data base, data base don't answer",
+			slog.Any("error", err),
+		)
 		return nil, err
 	}
 
@@ -43,12 +57,17 @@ func ConnToStorage() (*storage, error) {
 
 	_, err = db.Exec(query)
 	if err != nil {
-		fmt.Println(3)
+		logger.LogAttrs(ctx,
+			slog.LevelError,
+			"can't execute query (create table)",
+			slog.Any("error", err),
+		)
 		return nil, err
 	}
 
 	return &storage{
-		db: db,
+		db:  db,
+		ctx: ctx,
 	}, nil
 }
 

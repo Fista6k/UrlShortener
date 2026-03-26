@@ -1,10 +1,12 @@
 package controller
 
 import (
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 	"sync"
 
+	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 	"github.com/Fista6k/Url-Shorterer.git/internal/service"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -13,6 +15,7 @@ import (
 type Router struct {
 	Router      *gin.Engine
 	RateLimiter *RateLimiter
+	ctx         context.Context
 }
 
 type Client struct {
@@ -24,12 +27,13 @@ type RateLimiter struct {
 	mu      sync.Mutex
 }
 
-func NewRouter(service *service.ShortererService) *Router {
+func NewRouter(ctx context.Context, service *service.ShortererService) *Router {
 	router := &Router{
 		gin.Default(),
 		&RateLimiter{
 			clients: make(map[string]*Client),
 		},
+		ctx,
 	}
 
 	router.Router.LoadHTMLGlob("static/*.html")
@@ -47,6 +51,8 @@ func (r Router) AddEndPoints(service *service.ShortererService) {
 }
 
 func (r Router) RateLimiterFunc() gin.HandlerFunc {
+	logger := r.ctx.Value("logger").(*slog.Logger)
+
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 
@@ -58,13 +64,25 @@ func (r Router) RateLimiterFunc() gin.HandlerFunc {
 		r.RateLimiter.mu.Unlock()
 
 		if !cl.limiter.Allow() {
-			log.Println("rate limited", ip)
+			logger.LogAttrs(
+				r.ctx,
+				slog.LevelDebug,
+				"rate for user limited",
+				slog.String("client ip", ip),
+			)
+
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "rate limit exceeded",
+				"error": domain.ErrLimitExceeded,
 			})
 			return
 		}
-		log.Println("allowed request from", ip)
+
+		logger.LogAttrs(
+			r.ctx,
+			slog.LevelDebug,
+			"allowed request from client",
+			slog.String("client ip", ip),
+		)
 
 		c.Next()
 	}
