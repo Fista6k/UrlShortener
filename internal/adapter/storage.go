@@ -9,17 +9,18 @@ import (
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 type storage struct {
-	db  *sql.DB
-	ctx context.Context
+	db    *sql.DB
+	redis *redis.Client
+	ctx   context.Context
 }
 
 type Storage interface {
 	Save(*domain.Link) error
-	FindByShortCode(string) (*domain.Link, error)
-	FindByURL(string) (*domain.Link, error)
+	FindByShortCode(string) (string, error)
 }
 
 func ConnToStorage(ctx context.Context) (*storage, error) {
@@ -65,10 +66,34 @@ func ConnToStorage(ctx context.Context) (*storage, error) {
 		return nil, err
 	}
 
+	redis, err := ConnToRedis()
+	if err != nil {
+		logger.LogAttrs(
+			ctx,
+			slog.LevelError,
+			"Can't connect to redis db",
+			slog.Any("error", err),
+		)
+		return nil, err
+	}
+
 	return &storage{
-		db:  db,
-		ctx: ctx,
+		db:    db,
+		ctx:   ctx,
+		redis: redis,
 	}, nil
+}
+
+func ConnToRedis() (*redis.Client, error) {
+	connString := makeConnStringForRedis()
+
+	opt, err := redis.ParseURL(connString)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return redis.NewClient(opt), nil
 }
 
 func makeConnStr() string {
@@ -78,4 +103,13 @@ func makeConnStr() string {
 	dbPort := os.Getenv("DB_PORT")
 	dbHost := os.Getenv("DB_HOST")
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+}
+
+func makeConnStringForRedis() string {
+	db := os.Getenv("DB_NAME_REDIS")
+	password := os.Getenv("REDIS_PASSWORD")
+	user := os.Getenv("REDIS_USER")
+	port := os.Getenv("REDIS_PORT")
+	host := os.Getenv("REDIS_HOST")
+	return fmt.Sprintf("redis://%s:%s@%s:%s/%s", user, password, host, port, db)
 }

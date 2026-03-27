@@ -12,6 +12,11 @@ func (s ShortererService) Redirect(c *gin.Context) {
 	logger := s.ctx.Value("logger").(*slog.Logger)
 	shortUrl := c.Param("shortUrl")
 
+	if shortUrl == "favicon.ico" {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
 	logger.LogAttrs(
 		c,
 		slog.LevelInfo,
@@ -53,7 +58,7 @@ func (s ShortererService) Redirect(c *gin.Context) {
 		c,
 		slog.LevelInfo,
 		"Successfully find link by shortCode",
-		slog.String("url", link.OriginalUrl),
+		slog.String("url", link),
 		slog.String("shortCode", shortUrl),
 	)
 
@@ -61,8 +66,8 @@ func (s ShortererService) Redirect(c *gin.Context) {
 		c,
 		slog.LevelInfo,
 		"Redirecting to the link",
-		slog.String("url", link.OriginalUrl),
+		slog.String("url", link),
 	)
 
-	c.Redirect(http.StatusPermanentRedirect, link.OriginalUrl)
+	c.Redirect(http.StatusPermanentRedirect, link)
 }
