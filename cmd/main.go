@@ -67,6 +67,7 @@ func main() {
 	logger.Info("shutting down gracefully, press Ctrl+C to force")
 
 	r.RateLimiter.Stop()
+	storage.Redis.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {

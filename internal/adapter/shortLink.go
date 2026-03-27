@@ -21,7 +21,7 @@ func (s storage) Save(link *domain.Link) error {
 		return err
 	}
 
-	err = s.redis.Set(s.ctx, link.ShortUrl, link.OriginalUrl, 24*time.Hour).Err()
+	err = s.Redis.Set(s.ctx, link.ShortUrl, link.OriginalUrl, 24*time.Hour).Err()
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (s storage) Save(link *domain.Link) error {
 func (s storage) FindByShortCode(code string) (string, error) {
 	logger := s.ctx.Value("logger").(*slog.Logger)
 
-	originalUrl, err := s.redis.Get(s.ctx, code).Result()
+	originalUrl, err := s.Redis.Get(s.ctx, code).Result()
 	if err == nil {
 		return originalUrl, nil
 	}
