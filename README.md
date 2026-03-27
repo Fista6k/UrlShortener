@@ -6,7 +6,7 @@ I thought about how this kind of services working, so i decided to create my own
 
 # Tech
 * Go (gin)
-* Postgres
+* Postgres, Redis
 * clean architecture
 
 # Installation and start
@@ -25,6 +25,12 @@ DB_USER=your data base user
 DB_PASSWORD=your data base password
 DB_PORT=your data base port
 DB_HOST=localhost
+
+DB_NAME_REDIS=your_db_number(redis)
+REDIS_PASSWORD=your_db_password(redis)
+REDIS_HOST=localhost
+REDIS_PORT=your_redis_port
+REDIS_USER=your_redis_user
 ```
 
 3. Run the server
