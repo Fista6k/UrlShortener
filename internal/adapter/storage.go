@@ -61,6 +61,7 @@ func ConnToStorage(ctx context.Context) (*storage, error) {
 			"can't apply migrations",
 			slog.Any("error", err),
 		)
+		return nil, err
 	}
 
 	redis, err := ConnToRedis()

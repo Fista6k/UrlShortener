@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"log"
 	"log/slog"
 	"net/http"
@@ -17,6 +16,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Logger string
+
 func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("No .env file found\n")
@@ -26,12 +27,14 @@ func init() {
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	port := flag.String("port", "8080", "where i run server")
-	flag.Parse()
+
+	port := os.Getenv("APP_PORT")
 
 	logger := slog.Default()
 
-	storage, err := adapter.ConnToStorage(context.WithValue(ctx, "logger", logger))
+	var l Logger = "logger"
+
+	storage, err := adapter.ConnToStorage(context.WithValue(ctx, l, logger))
 	if err != nil {
 		logger.LogAttrs(
 			context.TODO(),
@@ -42,9 +45,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	service := service.NewShortererService(context.WithValue(ctx, "logger", logger), storage)
-	r := controller.NewRouter(context.WithValue(ctx, "logger", logger), service)
-	addr := ":" + *port
+	service := service.NewShortererService(context.WithValue(ctx, l, logger), storage)
+	r := controller.NewRouter(context.WithValue(ctx, l, logger), service)
+	addr := ":" + port
 
 	server := &http.Server{
 		Handler: r.Router,
@@ -67,7 +70,7 @@ func main() {
 	logger.Info("shutting down gracefully, press Ctrl+C to force")
 
 	r.RateLimiter.Stop()
-	storage.Redis.Close()
+	_ = storage.Redis.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
