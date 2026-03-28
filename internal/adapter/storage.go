@@ -3,12 +3,14 @@ package adapter
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -22,6 +24,8 @@ type Storage interface {
 	Save(*domain.Link) error
 	FindByShortCode(string) (string, error)
 }
+
+var embedMigrations embed.FS
 
 func ConnToStorage(ctx context.Context) (*storage, error) {
 	logger := ctx.Value("logger").(*slog.Logger)
@@ -48,22 +52,15 @@ func ConnToStorage(ctx context.Context) (*storage, error) {
 		return nil, err
 	}
 
-	query := `
-		CREATE TABLE IF NOT EXISTS links (
-			id SERIAL PRIMARY KEY,
-			original_url TEXT NOT NULL,
-			short_url TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT NOW()
-	);`
+	goose.SetBaseFS(embedMigrations)
 
-	_, err = db.Exec(query)
-	if err != nil {
-		logger.LogAttrs(ctx,
+	if err = goose.Up(db, "migrations"); err != nil {
+		logger.LogAttrs(
+			ctx,
 			slog.LevelError,
-			"can't execute query (create table)",
+			"can't apply migrations",
 			slog.Any("error", err),
 		)
-		return nil, err
 	}
 
 	redis, err := ConnToRedis()
