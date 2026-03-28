@@ -9,7 +9,7 @@ import (
 )
 
 func (s ShortererService) Redirect(c *gin.Context) {
-	logger := s.ctx.Value("logger").(*slog.Logger)
+	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 	shortUrl := c.Param("shortUrl")
 
 	if shortUrl == "favicon.ico" {

@@ -25,10 +25,11 @@ type Storage interface {
 	FindByShortCode(string) (string, error)
 }
 
+//go:embed migrations/*.sql
 var embedMigrations embed.FS
 
 func ConnToStorage(ctx context.Context) (*storage, error) {
-	logger := ctx.Value("logger").(*slog.Logger)
+	logger := ctx.Value(domain.LoggerKey).(*slog.Logger)
 
 	connStr := makeConnStr()
 	db, err := sql.Open("postgres", connStr)
@@ -105,9 +106,7 @@ func makeConnStr() string {
 
 func makeConnStringForRedis() string {
 	db := os.Getenv("DB_NAME_REDIS")
-	password := os.Getenv("REDIS_PASSWORD")
-	user := os.Getenv("REDIS_USER")
 	port := os.Getenv("REDIS_PORT")
 	host := os.Getenv("REDIS_HOST")
-	return fmt.Sprintf("redis://%s:%s@%s:%s/%s", user, password, host, port, db)
+	return fmt.Sprintf("redis://%s:%s/%s", host, port, db)
 }

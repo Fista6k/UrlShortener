@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,15 +11,14 @@ import (
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/adapter"
 	controller "github.com/Fista6k/Url-Shorterer.git/internal/controller/http"
+	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
 	"github.com/Fista6k/Url-Shorterer.git/internal/service"
 	"github.com/joho/godotenv"
 )
 
-type Logger string
-
 func init() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("No .env file found\n")
+		slog.Info("Can't found .env file, using environment variables")
 	}
 }
 
@@ -32,9 +30,7 @@ func main() {
 
 	logger := slog.Default()
 
-	var l Logger = "logger"
-
-	storage, err := adapter.ConnToStorage(context.WithValue(ctx, l, logger))
+	storage, err := adapter.ConnToStorage(context.WithValue(ctx, domain.LoggerKey, logger))
 	if err != nil {
 		logger.LogAttrs(
 			context.TODO(),
@@ -45,8 +41,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	service := service.NewShortererService(context.WithValue(ctx, l, logger), storage)
-	r := controller.NewRouter(context.WithValue(ctx, l, logger), service)
+	service := service.NewShortererService(context.WithValue(ctx, domain.LoggerKey, logger), storage)
+	r := controller.NewRouter(context.WithValue(ctx, domain.LoggerKey, logger), service)
 	addr := ":" + port
 
 	server := &http.Server{

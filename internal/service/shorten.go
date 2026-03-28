@@ -14,7 +14,7 @@ import (
 )
 
 func (s ShortererService) Shorten(c *gin.Context) {
-	logger := s.ctx.Value("logger").(*slog.Logger)
+	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 	original_url := c.PostForm("url")
 
 	logger.LogAttrs(

@@ -10,6 +10,8 @@ import (
 )
 
 func (s storage) Save(link *domain.Link) error {
+	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
+
 	query := `
 		INSERT INTO links (original_url, short_url, created_at)
 		VALUES ($1, $2, $3)
@@ -18,11 +20,23 @@ func (s storage) Save(link *domain.Link) error {
 
 	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
 	if err != nil {
+		logger.LogAttrs(
+			s.ctx,
+			slog.LevelError,
+			"Can't save link in postgres",
+			slog.Any("error", err),
+		)
 		return err
 	}
 
 	err = s.Redis.Set(s.ctx, link.ShortUrl, link.OriginalUrl, 24*time.Hour).Err()
 	if err != nil {
+		logger.LogAttrs(
+			s.ctx,
+			slog.LevelError,
+			"Can't save link in redis",
+			slog.Any("error", err),
+		)
 		return err
 	}
 
@@ -30,7 +44,7 @@ func (s storage) Save(link *domain.Link) error {
 }
 
 func (s storage) FindByShortCode(code string) (string, error) {
-	logger := s.ctx.Value("logger").(*slog.Logger)
+	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 
 	originalUrl, err := s.Redis.Get(s.ctx, code).Result()
 	if err == nil {

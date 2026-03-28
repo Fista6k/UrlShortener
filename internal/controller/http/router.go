@@ -51,7 +51,7 @@ func (r Router) AddEndPoints(service *service.ShortererService) {
 }
 
 func (r Router) RateLimiterFunc() gin.HandlerFunc {
-	logger := r.ctx.Value("logger").(*slog.Logger)
+	logger := r.ctx.Value(domain.LoggerKey).(*slog.Logger)
 
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
