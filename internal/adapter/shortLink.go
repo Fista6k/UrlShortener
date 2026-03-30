@@ -15,8 +15,8 @@ func (s storage) SaveOrGet(link *domain.Link) (string, error) {
 	query := `
 		INSERT INTO links (original_url, short_url, created_at)
 		VALUES ($1, $2, $3)
-		RETURNING id
-		ON CONFLICT (short_url) DO NOTHING;
+		ON CONFLICT (short_url) DO NOTHING
+		RETURNING id;
 	`
 
 	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
