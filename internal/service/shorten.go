@@ -24,7 +24,7 @@ func (s ShortererService) Shorten(c *gin.Context) {
 		slog.String("url", original_url),
 	)
 
-	shortUrl, err := generateShortLink(original_url)
+	shortUrl, err := s.CreateShortLink(original_url)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -56,28 +56,6 @@ func (s ShortererService) Shorten(c *gin.Context) {
 		slog.String("url", original_url),
 		slog.String("shortUrl", shortUrl),
 	)
-
-	err = s.storage.Save(&domain.Link{
-		OriginalUrl: original_url,
-		ShortUrl:    shortUrl,
-		CreatedAt:   time.Now(),
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":       domain.ErrInternalProblems,
-			"description": "can't save your link for a while",
-		})
-
-		logger.LogAttrs(
-			s.ctx,
-			slog.LevelError,
-			"Can't save link for some reasons",
-			slog.Any("error", err),
-		)
-
-		return
-	}
 
 	logger.LogAttrs(
 		c,
@@ -115,4 +93,49 @@ func generateShortLink(originalUrl string) (string, error) {
 		return "", err
 	}
 	return result[:8], nil
+}
+
+func (s *ShortererService) CreateShortLink(original_url string) (string, error) {
+
+	shortUrl, err := generateShortLink(original_url)
+
+	if err != nil {
+		return "", err
+	}
+
+	existingUrl, err := s.storage.SaveOrGet(&domain.Link{
+		OriginalUrl: original_url,
+		ShortUrl:    shortUrl,
+		CreatedAt:   time.Now(),
+	})
+
+	if existingUrl == original_url {
+		return shortUrl, nil
+	}
+
+	return s.resolveCollision(original_url, 1)
+}
+
+func (s *ShortererService) resolveCollision(original_url string, attempt int) (string, error) {
+	if attempt > 5 {
+		return "", domain.ErrMaxAttemptsToGenerateShortUrl
+	}
+
+	salted := fmt.Sprintf("%s|%d", original_url, attempt)
+	shortLink, err := generateShortLink(salted)
+	if err != nil {
+		return "", err
+	}
+
+	existingUrl, err := s.storage.SaveOrGet(&domain.Link{
+		OriginalUrl: original_url,
+		ShortUrl:    shortLink,
+		CreatedAt:   time.Now(),
+	})
+
+	if existingUrl == original_url {
+		return shortLink, nil
+	}
+
+	return s.resolveCollision(original_url, attempt+1)
 }

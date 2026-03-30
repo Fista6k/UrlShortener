@@ -9,27 +9,33 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func (s storage) Save(link *domain.Link) error {
+func (s storage) SaveOrGet(link *domain.Link) (string, error) {
 	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 
 	query := `
 		INSERT INTO links (original_url, short_url, created_at)
 		VALUES ($1, $2, $3)
 		RETURNING id
+		ON CONFLICT (short_url) DO NOTHING;
 	`
 
 	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		logger.LogAttrs(
 			s.ctx,
 			slog.LevelError,
 			"Can't save link in postgres",
 			slog.Any("error", err),
 		)
-		return err
+		return "", err
 	}
 
-	err = s.Redis.Set(s.ctx, link.ShortUrl, link.OriginalUrl, 24*time.Hour).Err()
+	existingUrl, err := s.FindByShortCode(link.ShortUrl)
+	if err != nil {
+		return "", err
+	}
+
+	err = s.Redis.Set(s.ctx, link.ShortUrl, existingUrl, 24*time.Hour).Err()
 	if err != nil {
 		logger.LogAttrs(
 			s.ctx,
@@ -37,10 +43,10 @@ func (s storage) Save(link *domain.Link) error {
 			"Can't save link in redis",
 			slog.Any("error", err),
 		)
-		return err
+		return "", err
 	}
 
-	return nil
+	return existingUrl, nil
 }
 
 func (s storage) FindByShortCode(code string) (string, error) {
@@ -67,7 +73,7 @@ func (s storage) FindByShortCode(code string) (string, error) {
 		WHERE short_url = $1
 	`
 
-	var link *domain.Link
+	var link domain.Link
 	err = s.db.QueryRow(query, code).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
 
 	if err != nil {
@@ -79,4 +85,25 @@ func (s storage) FindByShortCode(code string) (string, error) {
 	}
 
 	return link.OriginalUrl, nil
+}
+
+func (s storage) FindByURL(url string) (*domain.Link, error) {
+	query := `
+		SELECT id, original_url, short_url, created_at
+		FROM links
+		WHERE original_url = $1
+	`
+
+	var link domain.Link
+	err := s.db.QueryRow(query, url).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, domain.ErrNotFound
+		} else {
+			return nil, err
+		}
+	}
+
+	return &link, nil
 }

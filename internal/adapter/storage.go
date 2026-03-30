@@ -21,7 +21,7 @@ type storage struct {
 }
 
 type Storage interface {
-	Save(*domain.Link) error
+	SaveOrGet(*domain.Link) (string, error)
 	FindByShortCode(string) (string, error)
 }
 
