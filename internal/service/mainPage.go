@@ -6,6 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s *ShortererService) MainPage(c *gin.Context) {
+func (s *ShortenerService) MainPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
 }

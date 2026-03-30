@@ -41,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	service := service.NewShortererService(context.WithValue(ctx, domain.LoggerKey, logger), storage)
+	service := service.NewShortenerService(context.WithValue(ctx, domain.LoggerKey, logger), storage)
 	r := controller.NewRouter(context.WithValue(ctx, domain.LoggerKey, logger), service)
 	addr := ":" + port
 

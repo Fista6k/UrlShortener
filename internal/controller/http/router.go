@@ -27,7 +27,7 @@ type RateLimiter struct {
 	mu      sync.Mutex
 }
 
-func NewRouter(ctx context.Context, service *service.ShortererService) *Router {
+func NewRouter(ctx context.Context, service *service.ShortenerService) *Router {
 	router := &Router{
 		gin.Default(),
 		&RateLimiter{
@@ -43,7 +43,7 @@ func NewRouter(ctx context.Context, service *service.ShortererService) *Router {
 	return router
 }
 
-func (r Router) AddEndPoints(service *service.ShortererService) {
+func (r Router) AddEndPoints(service *service.ShortenerService) {
 	r.Router.Use(r.RateLimiterFunc())
 	r.Router.GET("/", service.MainPage)
 	r.Router.POST("/shorten", service.Shorten)

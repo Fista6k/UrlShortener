@@ -13,7 +13,7 @@ import (
 	"github.com/itchyny/base58-go"
 )
 
-func (s ShortererService) Shorten(c *gin.Context) {
+func (s ShortenerService) Shorten(c *gin.Context) {
 	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 	original_url := c.PostForm("url")
 
@@ -95,7 +95,7 @@ func generateShortLink(originalUrl string) (string, error) {
 	return result[:8], nil
 }
 
-func (s *ShortererService) CreateShortLink(original_url string) (string, error) {
+func (s *ShortenerService) CreateShortLink(original_url string) (string, error) {
 
 	shortUrl, err := generateShortLink(original_url)
 
@@ -116,7 +116,7 @@ func (s *ShortererService) CreateShortLink(original_url string) (string, error) 
 	return s.resolveCollision(original_url, 1)
 }
 
-func (s *ShortererService) resolveCollision(original_url string, attempt int) (string, error) {
+func (s *ShortenerService) resolveCollision(original_url string, attempt int) (string, error) {
 	if attempt > 5 {
 		return "", domain.ErrMaxAttemptsToGenerateShortUrl
 	}

@@ -78,7 +78,7 @@ func TestGenerateShortLink_NoCollision_ReturnsBaseShortLink(t *testing.T) {
 	}
 
 	logger := slog.New(slog.NewTextHandler(testWriter{}, nil))
-	testService := NewShortererService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
+	testService := NewShortenerService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
 
 	got, err := testService.CreateShortLink(url)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestGenerateShortLink_CollisionResolveWithSaltedAttempt(t *testing.T) {
 	}
 
 	logger := slog.New(slog.NewTextHandler(testWriter{}, nil))
-	testService := NewShortererService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
+	testService := NewShortenerService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
 
 	got, err := testService.CreateShortLink(url)
 	if err != nil {
@@ -142,7 +142,7 @@ func TestGenerateShortLink_ExceedsAttempts_ReturnsMaxAttemptsError(t *testing.T)
 	}
 
 	logger := slog.New(slog.NewTextHandler(testWriter{}, nil))
-	testService := NewShortererService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
+	testService := NewShortenerService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
 
 	_, err := testService.CreateShortLink(url)
 	if !errors.Is(err, domain.ErrMaxAttemptsToGenerateShortUrl) {

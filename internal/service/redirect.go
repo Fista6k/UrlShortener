@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s ShortererService) Redirect(c *gin.Context) {
+func (s ShortenerService) Redirect(c *gin.Context) {
 	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 	shortUrl := c.Param("shortUrl")
 
