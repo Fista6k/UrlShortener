@@ -5,9 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Fista6k/Url-Shorterer.git/internal/domain"
+	"github.com/gin-gonic/gin"
 )
 
 type fakeStorage struct {
@@ -147,5 +152,39 @@ func TestGenerateShortLink_ExceedsAttempts_ReturnsMaxAttemptsError(t *testing.T)
 	_, err := testService.CreateShortLink(url)
 	if !errors.Is(err, domain.ErrMaxAttemptsToGenerateShortUrl) {
 		t.Fatalf("expected max attempts error, got %v", err)
+	}
+}
+
+func TestCreateShortLink_StatusCreated_Returns201AndJson(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	link := "https://example.com/page"
+	shortUrl, _ := generateShortLink(link)
+
+	fakeStorage := &fakeStorage{st: map[string]string{
+		shortUrl: link,
+	}}
+	logger := slog.New(slog.NewTextHandler(testWriter{}, nil))
+	testService := NewShortenerService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
+
+	router := gin.New()
+	router.LoadHTMLGlob("../../static/*.html")
+	router.POST("/shorten", testService.Shorten)
+
+	values := url.Values{}
+	values.Set("url", link)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/shorten", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, shortUrl) {
+		t.Fatalf("expected body to contain short url %q, got %q", shortUrl, body)
 	}
 }
