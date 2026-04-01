@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -186,5 +187,41 @@ func TestCreateShortLink_StatusCreated_Returns201AndJson(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, shortUrl) {
 		t.Fatalf("expected body to contain short url %q, got %q", shortUrl, body)
+	}
+}
+
+func TestEmptyUrlForm_Status400_Returns400AndJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	link := ""
+
+	fakeStorage := &fakeStorage{}
+	logger := slog.New(slog.NewTextHandler(testWriter{}, nil))
+	testService := NewShortenerService(context.WithValue(context.Background(), domain.LoggerKey, logger), fakeStorage)
+
+	router := gin.New()
+	router.LoadHTMLGlob("../../static/*.html")
+	router.POST("/shorten", testService.Shorten)
+
+	values := url.Values{}
+	values.Set("url", link)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/shorten", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+
+	var body map[string]interface{}
+	err := json.Unmarshal(rec.Body.Bytes(), &body)
+	if err != nil {
+		t.Fatalf("invalid json: %v, body=%q", err, rec.Body.String())
+	}
+
+	if body["error"] != domain.EmptyUrlError.Error() {
+		t.Fatalf("expected %q, got %v", domain.EmptyUrlError.Error(), body["error"])
 	}
 }

@@ -17,6 +17,18 @@ func (s ShortenerService) Shorten(c *gin.Context) {
 	logger := s.ctx.Value(domain.LoggerKey).(*slog.Logger)
 	original_url := c.PostForm("url")
 
+	if original_url == "" {
+		logger.LogAttrs(
+			c,
+			slog.LevelError,
+			"Url form is empty",
+		)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": domain.EmptyUrlError.Error(),
+		})
+		return
+	}
+
 	logger.LogAttrs(
 		c,
 		slog.LevelInfo,

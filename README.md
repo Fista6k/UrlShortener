@@ -1,6 +1,6 @@
 # URL Shortener
 
-Simple URL shortener service built with Go and Gin.  
+URL shortener service built with Go and Gin.  
 The application stores links in Postgres, uses Redis as cache, and applies DB migrations automatically on startup.
 
 ## Features
