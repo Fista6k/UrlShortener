@@ -15,7 +15,7 @@ import (
 )
 
 type storage struct {
-	db    *sql.DB
+	Db    *sql.DB
 	Redis *redis.Client
 	ctx   context.Context
 }
@@ -77,7 +77,7 @@ func ConnToStorage(ctx context.Context) (*storage, error) {
 	}
 
 	return &storage{
-		db:    db,
+		Db:    db,
 		ctx:   ctx,
 		Redis: redis,
 	}, nil

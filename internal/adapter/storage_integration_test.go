@@ -74,10 +74,12 @@ func TestStorage_SaveOrGet_Collision_ReturnsExistingOriginalUrl(t *testing.T) {
 
 	st, err := ConnToStorage(ctx)
 	if err != nil {
-		t.Fatalf("failed to connect storage: %v")
+		t.Fatalf("failed to connect storage: %v", err)
 	}
 	defer st.Redis.Close()
 	defer st.db.Close()
+
+	clearData(t, st)
 
 	short := "short"
 	url1 := "https://example.com/first"

@@ -19,7 +19,7 @@ func (s storage) SaveOrGet(link *domain.Link) (string, error) {
 		RETURNING id;
 	`
 
-	err := s.db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
+	err := s.Db.QueryRow(query, link.OriginalUrl, link.ShortUrl, link.CreatedAt).Scan(&link.ID)
 	if err != nil && err != sql.ErrNoRows {
 		logger.LogAttrs(
 			s.ctx,
@@ -74,7 +74,7 @@ func (s storage) FindByShortCode(code string) (string, error) {
 	`
 
 	var link domain.Link
-	err = s.db.QueryRow(query, code).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
+	err = s.Db.QueryRow(query, code).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -95,7 +95,7 @@ func (s storage) FindByURL(url string) (*domain.Link, error) {
 	`
 
 	var link domain.Link
-	err := s.db.QueryRow(query, url).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
+	err := s.Db.QueryRow(query, url).Scan(&link.ID, &link.OriginalUrl, &link.ShortUrl, &link.CreatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
